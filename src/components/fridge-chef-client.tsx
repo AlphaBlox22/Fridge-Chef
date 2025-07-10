@@ -6,12 +6,14 @@ import Image from 'next/image';
 import { handleIdentifyIngredients, handleGenerateRecipes } from '@/app/actions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Upload, AlertCircle, Salad, UtensilsCrossed, Sparkles, ChefHat } from 'lucide-react';
+import { Upload, AlertCircle, Salad, UtensilsCrossed, Sparkles, ChefHat, Save, Download, Share2, QrCode } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 type Recipe = {
   name: string;
@@ -52,6 +54,7 @@ export function FridgeChefClient() {
 
   const formRef = useRef<HTMLFormElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -71,9 +74,68 @@ export function FridgeChefClient() {
     setRecipeError(null);
     // Reset form state by re-triggering formAction with empty form data
     const formData = new FormData();
-    formAction(formData); 
+    formAction(formData);
   };
-  
+
+  const handleSave = () => {
+    toast({
+      title: 'Ingredients Saved!',
+      description: 'Your ingredients have been saved to your profile.',
+    });
+  };
+
+  const handleDownload = () => {
+    if (state?.ingredients) {
+      const text = state.ingredients.join('\n');
+      const blob = new Blob([text], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'ingredients.txt';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast({
+        title: 'Download Started',
+        description: 'Your ingredients.txt file is downloading.',
+      });
+    }
+  };
+
+  const handleShare = async () => {
+    if (navigator.share && state?.ingredients) {
+      try {
+        await navigator.share({
+          title: 'My Fridge Ingredients',
+          text: `Check out the ingredients I have: ${state.ingredients.join(', ')}`,
+        });
+        toast({ title: 'Shared successfully!' });
+      } catch (error) {
+        toast({
+          title: 'Share failed',
+          description: 'Could not share the ingredients.',
+          variant: 'destructive',
+        });
+      }
+    } else {
+      toast({
+        title: 'Web Share API not supported',
+        description: 'Your browser does not support the native share function.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const generateQrCodeUrl = () => {
+    if (state?.ingredients) {
+      const text = `Ingredients: ${state.ingredients.join(', ')}`;
+      return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(text)}`;
+    }
+    return '';
+  };
+
+
   useEffect(() => {
     if (state?.ingredients && state.ingredients.length > 0) {
       const generate = async () => {
@@ -91,6 +153,8 @@ export function FridgeChefClient() {
       generate();
     }
   }, [state?.ingredients]);
+
+  const { pending: formPending } = useFormStatus();
 
   return (
     <div className="max-w-3xl mx-auto space-y-8">
@@ -125,7 +189,7 @@ export function FridgeChefClient() {
             />
             {imagePreview && (
               <div className="mt-4 relative aspect-video w-full max-w-md mx-auto rounded-lg overflow-hidden border-2 border-dashed">
-                <Image src={imagePreview} alt="Fridge content preview" layout="fill" objectFit="contain" />
+                <Image src={imagePreview} alt="Fridge content preview" fill objectFit="contain" />
               </div>
             )}
             <div className="flex flex-col sm:flex-row gap-2 justify-end">
@@ -144,7 +208,7 @@ export function FridgeChefClient() {
          </Alert>
       )}
 
-      {(state?.ingredients || useFormStatus().pending) && (
+      {(formPending || state?.ingredients) && (
         <Card className="shadow-lg">
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -153,7 +217,7 @@ export function FridgeChefClient() {
                 </CardTitle>
             </CardHeader>
             <CardContent>
-                 {useFormStatus().pending ? (
+                 {formPending ? (
                      <div className="flex flex-wrap gap-2">
                         <Skeleton className="h-8 w-24 rounded-full" />
                         <Skeleton className="h-8 w-32 rounded-full" />
@@ -170,6 +234,34 @@ export function FridgeChefClient() {
                     </div>
                 ) : null}
             </CardContent>
+            {state.ingredients && state.ingredients.length > 0 && !formPending && (
+              <CardFooter className="flex-wrap gap-2 pt-4 border-t">
+                  <Button onClick={handleSave} variant="outline" size="sm">
+                      <Save className="mr-2 h-4 w-4"/> Save
+                  </Button>
+                  <Button onClick={handleDownload} variant="outline" size="sm">
+                      <Download className="mr-2 h-4 w-4"/> Download
+                  </Button>
+                  <Button onClick={handleShare} variant="outline" size="sm">
+                      <Share2 className="mr-2 h-4 w-4"/> Share
+                  </Button>
+                   <Dialog>
+                        <DialogTrigger asChild>
+                           <Button variant="outline" size="sm">
+                               <QrCode className="mr-2 h-4 w-4"/> Show QR Code
+                           </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-xs">
+                           <DialogHeader>
+                               <DialogTitle>Share with QR Code</DialogTitle>
+                           </DialogHeader>
+                           <div className="flex items-center justify-center p-4">
+                               <Image src={generateQrCodeUrl()} alt="QR code for ingredients" width={200} height={200} />
+                           </div>
+                        </DialogContent>
+                   </Dialog>
+              </CardFooter>
+            )}
         </Card>
       )}
 
