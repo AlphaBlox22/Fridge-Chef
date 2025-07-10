@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { useFormState, useFormStatus } from 'react-dom';
+import { useState, useRef, useEffect, useActionState } from 'react';
+import { useFormStatus } from 'react-dom';
 import Image from 'next/image';
 import { handleIdentifyIngredients, handleGenerateRecipes } from '@/app/actions';
 import { Button } from '@/components/ui/button';
@@ -44,7 +44,7 @@ function SubmitButton() {
 }
 
 export function FridgeChefClient() {
-  const [state, formAction] = useFormState(handleIdentifyIngredients, initialState);
+  const [state, formAction] = useActionState(handleIdentifyIngredients, initialState);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [isGeneratingRecipes, setIsGeneratingRecipes] = useState(false);
@@ -71,7 +71,7 @@ export function FridgeChefClient() {
     setRecipeError(null);
     // Reset form state by re-triggering formAction with empty form data
     const formData = new FormData();
-    formAction(initialState, formData); 
+    formAction(formData); 
   };
   
   useEffect(() => {
