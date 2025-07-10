@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
 import Image from 'next/image';
+import Link from 'next/link';
 import { handleIdentifyIngredients, handleGenerateRecipes } from '@/app/actions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Upload, AlertCircle, Salad, UtensilsCrossed, Sparkles, ChefHat, Save, Download, Share2, QrCode } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 type Recipe = {
   name: string;
@@ -51,6 +53,10 @@ export function FridgeChefClient() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [isGeneratingRecipes, setIsGeneratingRecipes] = useState(false);
   const [recipeError, setRecipeError] = useState<string | null>(null);
+  
+  // For now, we'll simulate the user being logged out.
+  // In a real app, you'd replace this with a hook that checks authentication status.
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const formRef = useRef<HTMLFormElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -78,6 +84,7 @@ export function FridgeChefClient() {
   };
 
   const handleSave = () => {
+     if (!isLoggedIn) return; // This will be handled by the Link redirect anyway
     toast({
       title: 'Ingredients Saved!',
       description: 'Your ingredients have been saved to your profile.',
@@ -85,6 +92,7 @@ export function FridgeChefClient() {
   };
 
   const handleDownload = () => {
+     if (!isLoggedIn) return;
     if (state?.ingredients) {
       const text = state.ingredients.join('\n');
       const blob = new Blob([text], { type: 'text/plain' });
@@ -104,6 +112,7 @@ export function FridgeChefClient() {
   };
 
   const handleShare = async () => {
+     if (!isLoggedIn) return;
     if (navigator.share && state?.ingredients) {
       try {
         await navigator.share({
@@ -126,7 +135,7 @@ export function FridgeChefClient() {
       });
     }
   };
-
+  
   const generateQrCodeUrl = () => {
     if (state?.ingredients) {
       const text = `Ingredients: ${state.ingredients.join(', ')}`;
@@ -155,6 +164,25 @@ export function FridgeChefClient() {
   }, [state?.ingredients]);
 
   const { pending: formPending } = useFormStatus();
+  
+  const AuthTooltipWrapper = ({ children, featureName }: { children: React.ReactNode, featureName: string }) => {
+    if (isLoggedIn) {
+      return <>{children}</>;
+    }
+    return (
+       <TooltipProvider>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <Link href="/login">{children}</Link>
+                </TooltipTrigger>
+                <TooltipContent>
+                    <p>Log in to {featureName}.</p>
+                </TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
+    );
+  };
+
 
   return (
     <div className="max-w-3xl mx-auto space-y-8">
@@ -215,6 +243,11 @@ export function FridgeChefClient() {
                     <Salad className="h-6 w-6"/>
                     Identified Ingredients
                 </CardTitle>
+                 {!isLoggedIn && !formPending && state.ingredients && (
+                    <CardDescription>
+                        <Link href="/login" className="text-primary underline">Log in</Link> or <Link href="/signup" className="text-primary underline">Sign up</Link> to save, download, or share your ingredients.
+                    </CardDescription>
+                )}
             </CardHeader>
             <CardContent>
                  {formPending ? (
@@ -236,15 +269,21 @@ export function FridgeChefClient() {
             </CardContent>
             {state.ingredients && state.ingredients.length > 0 && !formPending && (
               <CardFooter className="flex-wrap gap-2 pt-4 border-t">
-                  <Button onClick={handleSave} variant="outline" size="sm">
-                      <Save className="mr-2 h-4 w-4"/> Save
-                  </Button>
-                  <Button onClick={handleDownload} variant="outline" size="sm">
-                      <Download className="mr-2 h-4 w-4"/> Download
-                  </Button>
-                  <Button onClick={handleShare} variant="outline" size="sm">
-                      <Share2 className="mr-2 h-4 w-4"/> Share
-                  </Button>
+                  <AuthTooltipWrapper featureName="save your ingredients">
+                    <Button onClick={handleSave} variant="outline" size="sm" disabled={!isLoggedIn}>
+                        <Save className="mr-2 h-4 w-4"/> Save
+                    </Button>
+                  </AuthTooltipWrapper>
+                  <AuthTooltipWrapper featureName="download your ingredients list">
+                    <Button onClick={handleDownload} variant="outline" size="sm" disabled={!isLoggedIn}>
+                        <Download className="mr-2 h-4 w-4"/> Download
+                    </Button>
+                  </AuthTooltipWrapper>
+                  <AuthTooltipWrapper featureName="share your ingredients">
+                    <Button onClick={handleShare} variant="outline" size="sm" disabled={!isLoggedIn}>
+                        <Share2 className="mr-2 h-4 w-4"/> Share
+                    </Button>
+                  </AuthTooltipWrapper>
                    <Dialog>
                         <DialogTrigger asChild>
                            <Button variant="outline" size="sm">
@@ -255,9 +294,13 @@ export function FridgeChefClient() {
                            <DialogHeader>
                                <DialogTitle>Share with QR Code</DialogTitle>
                            </DialogHeader>
-                           <div className="flex items-center justify-center p-4">
-                               <Image src={generateQrCodeUrl()} alt="QR code for ingredients" width={200} height={200} />
-                           </div>
+                            {generateQrCodeUrl() ? (
+                                <div className="flex items-center justify-center p-4">
+                                    <Image src={generateQrCodeUrl()} alt="QR code for ingredients" width={200} height={200} />
+                                </div>
+                            ) : (
+                               <p className="p-4 text-center text-muted-foreground">No ingredients to share.</p> 
+                            )}
                         </DialogContent>
                    </Dialog>
               </CardFooter>
