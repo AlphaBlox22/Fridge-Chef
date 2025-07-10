@@ -1,11 +1,39 @@
+// src/app/signup/page.tsx
+'use client';
+
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ChefHat } from 'lucide-react';
+import { useAuth } from '@/context/auth-context';
+import { useToast } from '@/hooks/use-toast';
 
 export default function SignupPage() {
+  const { signInWithGoogle } = useAuth();
+  const router = useRouter();
+  const { toast } = useToast();
+
+  const handleGoogleSignUp = async () => {
+    try {
+      await signInWithGoogle();
+      router.push('/');
+       toast({
+        title: 'Account Created!',
+        description: "You've successfully signed up.",
+      });
+    } catch (error) {
+       console.error("Google sign up failed", error);
+      toast({
+        variant: 'destructive',
+        title: 'Sign Up Failed',
+        description: 'There was a problem signing up with Google. Please try again.',
+      });
+    }
+  };
+
   return (
     <div className="flex items-center justify-center min-h-screen bg-background">
       <Card className="mx-auto max-w-sm">
@@ -37,7 +65,7 @@ export default function SignupPage() {
             <Button type="submit" className="w-full">
               Create an account
             </Button>
-            <Button variant="outline" className="w-full">
+            <Button variant="outline" className="w-full" onClick={handleGoogleSignUp}>
               Sign up with Google
             </Button>
           </div>

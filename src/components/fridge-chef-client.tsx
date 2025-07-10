@@ -16,6 +16,7 @@ import { Upload, AlertCircle, Salad, UtensilsCrossed, Sparkles, ChefHat, Save, D
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useAuth } from '@/context/auth-context';
 
 type Recipe = {
   name: string;
@@ -54,9 +55,8 @@ export function FridgeChefClient() {
   const [isGeneratingRecipes, setIsGeneratingRecipes] = useState(false);
   const [recipeError, setRecipeError] = useState<string | null>(null);
   
-  // For now, we'll simulate the user being logged out.
-  // In a real app, you'd replace this with a hook that checks authentication status.
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { user } = useAuth();
+  const isLoggedIn = !!user;
 
   const formRef = useRef<HTMLFormElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);

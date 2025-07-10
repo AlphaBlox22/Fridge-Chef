@@ -1,11 +1,40 @@
+// src/app/login/page.tsx
+'use client';
+
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ChefHat } from 'lucide-react';
+import { useAuth } from '@/context/auth-context';
+import { useToast } from '@/hooks/use-toast';
 
 export default function LoginPage() {
+  const { signInWithGoogle } = useAuth();
+  const router = useRouter();
+  const { toast } = useToast();
+
+  const handleGoogleLogin = async () => {
+    try {
+      await signInWithGoogle();
+      router.push('/');
+      toast({
+        title: 'Login Successful',
+        description: "You've been successfully logged in.",
+      });
+    } catch (error) {
+      console.error("Google login failed", error);
+      toast({
+        variant: 'destructive',
+        title: 'Login Failed',
+        description: 'There was a problem logging in with Google. Please try again.',
+      });
+    }
+  };
+
+
   return (
     <div className="flex items-center justify-center min-h-screen bg-background">
       <Card className="mx-auto max-w-sm">
@@ -32,7 +61,7 @@ export default function LoginPage() {
             <Button type="submit" className="w-full">
               Login
             </Button>
-            <Button variant="outline" className="w-full">
+            <Button variant="outline" className="w-full" onClick={handleGoogleLogin}>
               Login with Google
             </Button>
           </div>
