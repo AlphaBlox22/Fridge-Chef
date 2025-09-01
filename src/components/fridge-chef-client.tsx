@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect, useActionState } from 'react';
-import { useFormStatus } from 'react-dom';
+import { useState, useRef, useEffect } from 'react';
+import { useFormState, useFormStatus } from 'react-dom';
 import Image from 'next/image';
 import Link from 'next/link';
 import { handleIdentifyIngredients, handleGenerateRecipes } from '@/app/actions';
@@ -49,7 +49,7 @@ function SubmitButton() {
 }
 
 export function FridgeChefClient() {
-  const [state, formAction] = useActionState(handleIdentifyIngredients, initialState);
+  const [state, formAction] = useFormState(handleIdentifyIngredients, initialState);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [isGeneratingRecipes, setIsGeneratingRecipes] = useState(false);
@@ -259,8 +259,8 @@ export function FridgeChefClient() {
                      </div>
                  ) : state.ingredients && state.ingredients.length > 0 ? (
                     <div className="flex flex-wrap gap-2">
-                        {state.ingredients.map((ingredient, index) => (
-                            <Badge key={index} variant="secondary" className="text-lg py-1 px-3">
+                        {state.ingredients.map((ingredient) => (
+                            <Badge key={ingredient} variant="secondary" className="text-lg py-1 px-3">
                                 {ingredient}
                             </Badge>
                         ))}
@@ -332,7 +332,7 @@ export function FridgeChefClient() {
                  ) : recipes.length > 0 && (
                     <Accordion type="single" collapsible className="w-full">
                        {recipes.map((recipe, index) => (
-                          <AccordionItem key={index} value={`item-${index}`}>
+                          <AccordionItem key={recipe.name} value={`item-${index}`}>
                              <AccordionTrigger className="text-lg font-semibold hover:no-underline">
                                 <div className="flex items-center gap-2">
                                     <ChefHat className="h-5 w-5 text-primary"/>
@@ -346,7 +346,7 @@ export function FridgeChefClient() {
                                 
                                 <h4 className="font-bold mt-4 mb-1">Instructions:</h4>
                                 <div className="space-y-2">
-                                {recipe.instructions.split('\n').map((line, i) => line.trim() && <p key={i}>{line}</p>)}
+                                {recipe.instructions.split('\n').map((line, i) => line.trim() && <p key={`${recipe.name}-instruction-${i}`}>{line}</p>)}
                                 </div>
                              </AccordionContent>
                           </AccordionItem>
